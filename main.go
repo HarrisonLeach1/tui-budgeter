@@ -4,12 +4,29 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
+
+	auth "github.com/HarrisonLeach1/xero-tui/internal/api/auth"
+	"github.com/joho/godotenv"
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
 
 func main() {
+	// loads values from .env into the system
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
+
+	clientId, exists := os.LookupEnv("XERO_CLIENT_ID")
+	if !exists {
+		fmt.Println("XERO_CLIENT_ID environment variable is not present")
+		return
+	}
+
+	auth.AuthorizeUser(clientId, "http://localhost:5003")
+
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
