@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 
+	api "github.com/HarrisonLeach1/xero-tui/internal/api"
 	auth "github.com/HarrisonLeach1/xero-tui/internal/api/auth"
 	"github.com/joho/godotenv"
 
@@ -26,6 +27,10 @@ func main() {
 	}
 
 	auth.AuthorizeUser(clientId, "http://localhost:5003")
+
+	api.GetProfitAndLossStatement()
+
+	return
 
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)

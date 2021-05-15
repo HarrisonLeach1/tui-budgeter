@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/HarrisonLeach1/xero-tui/internal/api/models"
 	cv "github.com/nirasan/go-oauth-pkce-code-verifier"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/viper"
@@ -30,7 +31,7 @@ func AuthorizeUser(clientID string, redirectURL string) {
 		"https://login.xero.com/identity/connect/authorize?response_type=code"+
 			"&client_id=%s"+
 			"&redirect_uri=%s"+
-			"&scope=openid+profile+email+accounting.transactions"+
+			"&scope=openid+profile+email+accounting.reports.read"+
 			"&state=123"+
 			"&code_challenge=%s"+
 			"&code_challenge_method=S256",
@@ -64,7 +65,18 @@ func AuthorizeUser(clientID string, redirectURL string) {
 			return
 		}
 
+		tenantId, err := getTenantId(token)
+		if err != nil {
+			fmt.Println("auth: could not get tenant id")
+			io.WriteString(w, "Error: could not retrieve tenant\n")
+
+			// close the HTTP server and return
+			cleanup(server)
+			return
+		}
+
 		viper.Set("AccessToken", token)
+		viper.Set("TenantId", tenantId)
 		err = viper.WriteConfigAs("config.yaml")
 		// _, err = config.WriteConfigFile("auth.json", token)
 		if err != nil {
@@ -77,12 +89,19 @@ func AuthorizeUser(clientID string, redirectURL string) {
 			return
 		}
 
+		var GlobalStyles = []string{
+			"body {font-family: monospace}",
+		}
+
+		// WriteGlobalStylesTag will write the style tag to the response.
+		w.Write([]byte("<style>" + strings.Join(GlobalStyles, "") + "</style>"))
+
 		// return an indication of success to the caller
 		io.WriteString(w, `
 		<html>
 			<body>
 				<h1>Login successful!</h1>
-				<h2>You can close this window and return to the auth CLI.</h2>
+				<h2>You can close this window and return to the xero-tui app.</h2>
 			</body>
 		</html>`)
 
@@ -155,6 +174,37 @@ func getAccessToken(clientID string, codeVerifier string, authorizationCode stri
 	// retrieve the access token out of the map, and return to caller
 	accessToken := responseData["access_token"].(string)
 	return accessToken, nil
+}
+
+func getTenantId(accessToken string) (string, error) {
+	// set the url and form-encoded data for the POST to the access token endpoint
+	url := "https://api.xero.com/connections"
+
+	// create the request and execute it
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("content-type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+accessToken)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		fmt.Printf("auth: HTTP error: %s", err)
+		return "", err
+	}
+
+	// process the response
+	defer res.Body.Close()
+	var responseData []models.Connection
+	body, _ := ioutil.ReadAll(res.Body)
+
+	// unmarshal the json into a string map
+	err = json.Unmarshal(body, &responseData)
+	if err != nil {
+		fmt.Printf("auth: JSON error: %s", err)
+		return "", err
+	}
+
+	// TODO: Allow selection of Tenant
+	return responseData[0].TenantID, nil
+
 }
 
 // cleanup closes the HTTP server
