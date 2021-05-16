@@ -58,18 +58,35 @@ func RenderBudgetReport(fromDate string, toDate string) error {
 
 	summaryList := clui.CreateListBox(summary, 10, 10, clui.AutoSize)
 	summaryList.AddItem(fmt.Sprintf("Increase in savings: %%%.2f", ((closingBalance-openingBalance)/openingBalance)*100))
-	summaryList.AddItem(fmt.Sprintf("Planned Savings: $%.2f", budgetedIncome-budgetedExpenses))
 	summaryList.AddItem(fmt.Sprintf("Actual Savings: $%.2f", actualIncome-actualExpenses))
+	summaryList.AddItem(fmt.Sprintf("Planned Savings: $%.2f", budgetedIncome-budgetedExpenses))
 	summaryList.SetTextColor(clui.ColorWhite)
 	summaryList.SetActiveTextColor(clui.ColorWhiteBold)
 	summaryList.SetBackColor(clui.ColorBlack)
 	summaryList.SetActiveBackColor(clui.ColorBlack)
 
-	maxExp := math.Max(budgetedExpenses, actualExpenses)
-	createFramedProgressBar(left, int(budgetedExpenses), int(maxExp), "Planned Expenses", fmt.Sprintf("$%.2f", budgetedExpenses))
-	createFramedProgressBar(left, int(actualExpenses), int(maxExp), "Actual Expenses", fmt.Sprintf("$%.2f", actualExpenses))
+	updatePlannedSavings := func(amount float64) {
+		summaryList.RemoveItem(2)
+		summaryList.AddItem(fmt.Sprintf("Planned Savings: $%.2f", (budgetedIncome - budgetedExpenses)))
+		summaryList.Draw()
+	}
 
-	createTable(left, "Expenses Breakdown", pnlReport, budgetReport, "Less Operating Expenses")
+	maxExp := math.Max(budgetedExpenses, actualExpenses)
+	expBar := createFramedProgressBar(left, int(budgetedExpenses), int(maxExp), "Planned Expenses", fmt.Sprintf("$%.2f", budgetedExpenses))
+	actExpBar := createFramedProgressBar(left, int(actualExpenses), int(maxExp), "Actual Expenses", fmt.Sprintf("$%.2f", actualExpenses))
+
+	updatePlannedExpenses := func(amount float64) {
+		budgetedExpenses = budgetedExpenses + amount
+		maxExp := math.Max(budgetedExpenses, actualExpenses)
+		expBar.SetLimits(0, int(maxExp))
+		actExpBar.SetLimits(0, int(maxExp))
+		expBar.SetValue(int(budgetedExpenses))
+		expBar.SetTitle(fmt.Sprintf("$%.2f", budgetedExpenses))
+		expBar.Draw()
+		actExpBar.Draw()
+	}
+
+	createTable(left, "Expenses Breakdown", pnlReport, budgetReport, "Less Operating Expenses", updatePlannedSavings, updatePlannedExpenses)
 
 	right := clui.CreateFrame(view, viewWidth, clui.AutoSize, clui.BorderNone, clui.AutoSize)
 	right.SetPack(clui.Vertical)
@@ -79,10 +96,21 @@ func RenderBudgetReport(fromDate string, toDate string) error {
 	createBalanceChart(right, openingBalance, closingBalance)
 
 	maxInc := math.Max(budgetedIncome, actualIncome)
-	createFramedProgressBar(right, int(budgetedIncome), int(maxInc), "Planned Income", fmt.Sprintf("$%.2f", budgetedIncome))
-	createFramedProgressBar(right, int(actualIncome), int(maxInc), "Actual Income", fmt.Sprintf("$%.2f", actualIncome))
+	incBar := createFramedProgressBar(right, int(budgetedIncome), int(maxInc), "Planned Income", fmt.Sprintf("$%.2f", budgetedIncome))
+	actIncBar := createFramedProgressBar(right, int(actualIncome), int(maxInc), "Actual Income", fmt.Sprintf("$%.2f", actualIncome))
 
-	createTable(right, "Income Breakdown", pnlReport, budgetReport, "Income")
+	updatePlannedIncome := func(amount float64) {
+		budgetedIncome = budgetedIncome + amount
+		max := math.Max(budgetedIncome, actualIncome)
+		incBar.SetValue(int(budgetedIncome))
+		incBar.SetLimits(0, int(max))
+		actIncBar.SetLimits(0, int(max))
+		incBar.SetTitle(fmt.Sprintf("$%.2f", budgetedIncome))
+		incBar.Draw()
+		actIncBar.Draw()
+	}
+
+	createTable(right, "Income Breakdown", pnlReport, budgetReport, "Income", updatePlannedSavings, updatePlannedIncome)
 	return nil
 }
 
@@ -107,7 +135,7 @@ func createBalanceChart(parent *clui.Frame, openingBalance float64, closingBalan
 	barChart.SetData(data)
 }
 
-func createFramedProgressBar(parent *clui.Frame, value int, maxValue int, title string, valueLabel string) {
+func createFramedProgressBar(parent *clui.Frame, value int, maxValue int, title string, valueLabel string) *clui.ProgressBar {
 
 	barFrame := clui.CreateFrame(parent, 1, 1, clui.BorderThin, clui.AutoSize)
 	barFrame.SetPack(clui.Vertical)
@@ -123,9 +151,10 @@ func createFramedProgressBar(parent *clui.Frame, value int, maxValue int, title 
 	bar.SetBackColor(clui.ColorWhite)
 	bar.SetActiveBackColor(clui.ColorCyan)
 	bar.SetTextColor(clui.ColorBlack)
+	return bar
 }
 
-func createTable(parent *clui.Frame, title string, pnlReport models.Report, budgetReport models.Report, sectionTitle string) {
+func createTable(parent *clui.Frame, title string, pnlReport models.Report, budgetReport models.Report, sectionTitle string, updatePlannedSavings func(float64), updateBar func(float64)) {
 	tableFrame := clui.CreateFrame(parent, clui.AutoSize, clui.AutoSize, clui.BorderThin, clui.AutoSize)
 	tableFrame.SetPack(clui.Vertical)
 	tableFrame.SetGaps(clui.KeepValue, 1)
@@ -143,13 +172,15 @@ func createTable(parent *clui.Frame, title string, pnlReport models.Report, budg
 	}
 	table.SetColumns(cols)
 
-	budgetSection := findReportSection(budgetReport, sectionTitle)
+	budgetSection := findReportSection(budgetReport, sectionTitle, true)
 	pnlMap := *createCategoryToValueMap(pnlReport, sectionTitle)
 	table.SetRowCount(len(budgetSection.Rows))
 
 	isIncome := sectionTitle == "Income"
 
-	values := make([][4]string, len(budgetSection.Rows))
+	values := make([][4]float64, len(budgetSection.Rows))
+	categories := make([]string, len(budgetSection.Rows))
+
 	for i, budgetRow := range budgetSection.Rows {
 		category := budgetRow.Cells[0].Value
 		actualValueStr := pnlMap[category]
@@ -169,57 +200,129 @@ func createTable(parent *clui.Frame, title string, pnlReport models.Report, budg
 		if err != nil {
 			panic("How do people even code in go?")
 		}
-		values[i][0] = category
-		values[i][1] = fmt.Sprintf("$%.2f", budgetValue)
-		values[i][2] = fmt.Sprintf("$%.2f", actualValue)
-		diff := (budgetValue) - (actualValue)
-
-		// TODO: simplify, what da heck is going on here im too tired
-		if diff < 0 && !isIncome || diff >= 0 && isIncome {
-			if !isIncome {
-				diff *= -1
-			}
-			values[i][3] = fmt.Sprintf("-$%.2f", diff)
-		} else {
-			if isIncome {
-				diff *= -1
-			}
-			values[i][3] = fmt.Sprintf("$%.2f", diff)
-		}
+		categories[i] = category
+		values[i][1] = budgetValue
+		values[i][2] = actualValue
+		values[i][3] = (budgetValue) - (actualValue)
 	}
+
 	table.OnDrawCell(func(info *clui.ColumnDrawInfo) {
-		info.Text = values[info.Row][info.Col]
-		if info.Col == 3 {
+		if info.Col == 0 {
+			info.Text = categories[info.Row]
+		} else if info.Col == 3 {
+			diff := values[info.Row][3]
+			// TODO: simplify, what da heck is going on here im too tired
+			if diff < 0 && !isIncome || diff >= 0 && isIncome {
+				if !isIncome {
+					diff *= -1
+				}
+				info.Text = fmt.Sprintf("-$%.2f", diff)
+			} else {
+				if isIncome {
+					diff *= -1
+				}
+				info.Text = fmt.Sprintf("$%.2f", diff)
+			}
+
 			if info.Text[0:1] == "-" {
 				info.Fg = clui.ColorRed
 			} else {
 				info.Fg = clui.ColorGreen
 			}
+
+		} else {
+			info.Text = fmt.Sprintf("$%.2f", values[info.Row][info.Col])
 		}
+	})
+
+	table.OnAction(func(ev clui.TableEvent) {
+		btns := []string{"Close", "Dismiss"}
+		var action string
+		switch ev.Action {
+		case clui.TableActionEdit:
+			c := ev.Col
+			r := ev.Row
+
+			// only allow editing of budget column
+			if c != 1 {
+				return
+			}
+
+			oldVal := values[r][c] // ignore the dollar sign
+			dlg := clui.CreateEditDialog(
+				fmt.Sprintf("Editing budget for %s", categories[r]), "New value", fmt.Sprintf("%.2f", oldVal),
+			)
+			dlg.OnClose(func() {
+				switch dlg.Result() {
+				case clui.DialogButton1:
+					newText := dlg.EditResult()
+
+					newFloat, err := strconv.ParseFloat(newText, 64)
+					if err != nil {
+						// TODO
+						fmt.Errorf("input validation error")
+					}
+					values[r][c] = newFloat
+					values[r][3] = newFloat - values[r][2]
+
+					if isIncome {
+						updateBar(newFloat - oldVal)
+						updatePlannedSavings(newFloat - oldVal)
+					} else {
+						updateBar(newFloat - oldVal)
+						updatePlannedSavings(oldVal - newFloat)
+					}
+
+					clui.PutEvent(clui.Event{Type: clui.EventRedraw})
+				}
+			})
+			return
+		default:
+			action = "Unknown action"
+		}
+
+		dlg := clui.CreateConfirmationDialog(
+			"<c:blue>"+action,
+			"Click any button or press <c:yellow>SPACE<c:> to close the dialog",
+			btns, clui.DialogButton1)
+		dlg.OnClose(func() {})
 	})
 
 }
 
 func createCategoryToValueMap(report models.Report, sectionTitle string) *map[string]string {
 	m := make(map[string]string)
-	section := findReportSection(report, sectionTitle)
+	section := findReportSection(report, sectionTitle, true)
 	for _, row := range section.Rows {
 		m[row.Cells[0].Value] = row.Cells[1].Value
 	}
 	return &m
 }
 
-func findReportSection(report models.Report, title string) models.ReportRow {
+func findReportSection(report models.Report, title string, excludeSummary bool) models.ReportRow {
 	for _, section := range report.Rows {
 		if section.Title == title {
+			if excludeSummary {
+				return filterSectionByRowType(section, "Row")
+			}
 			return section
 		}
 	}
 	return models.ReportRow{}
 }
 
+func filterSectionByRowType(section models.ReportRow, rowTypeName string) models.ReportRow {
+	newRows := models.ReportRow{}
+	for _, row := range section.Rows {
+		if row.RowType == rowTypeName {
+			newRows.Rows = append(newRows.Rows, row)
+		}
+	}
+	return newRows
+}
+
 func findSectionTotal(report models.Report, title string) float64 {
-	section := findReportSection(report, title)
+	section := findReportSection(report, title, false)
 	for _, row := range section.Rows {
 		if row.RowType == "SummaryRow" {
 			val, err := strconv.ParseFloat(row.Cells[1].Value, 32)
