@@ -11,16 +11,20 @@ import (
 )
 
 func GetProfitAndLossStatement(fromDate string, toDate string) (models.Report, error) {
-	return fetchReport("ProfitAndLoss", fromDate, toDate)
+	return fetchReport("ProfitAndLoss", fromDate, toDate, "")
 }
 func GetBankSummary(fromDate string, toDate string) (models.Report, error) {
-	return fetchReport("BankSummary", fromDate, toDate)
+	return fetchReport("BankSummary", fromDate, toDate, "")
 }
 
-func fetchReport(reportType string, fromDate string, toDate string) (models.Report, error) {
+func GetBudgetSummary(fromDate string, toDate string) (models.Report, error) {
+	return fetchReport("BudgetSummary", fromDate, toDate, "&periods=1")
+}
+
+func fetchReport(reportType string, fromDate string, toDate string, extraParams string) (models.Report, error) {
 	accessToken, tenantId := getHeaders()
 
-	url := fmt.Sprintf("https://api.xero.com/api.xro/2.0/Reports/%s?fromDate=%s&toDate=%s", reportType, fromDate, toDate)
+	url := fmt.Sprintf("https://api.xero.com/api.xro/2.0/Reports/%s?fromDate=%s&toDate=%s%s", reportType, fromDate, toDate, extraParams)
 
 	// create the request and execute it
 	req, _ := http.NewRequest("GET", url, nil)
