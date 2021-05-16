@@ -1,13 +1,19 @@
 package ui
 
-import "github.com/VladimirMarkelov/clui"
+import (
+	"github.com/HarrisonLeach1/xero-tui/internal/api"
+	"github.com/VladimirMarkelov/clui"
+)
 
-func RenderMonthlyBudgetReport() {
+// Renders a window containing a budget report for the given period
+//
+// Params fromDate and toDate should be in the format "yyyy-mm-dd" e.g. "2021-05-31"
+func RenderBudgetReport(fromDate string, toDate string) error {
+	report, err := api.GetProfitAndLossStatement(fromDate, toDate)
+	if err != nil {
+		return err
+	}
 	view := clui.AddWindow(0, 0, 50, 50, "Monthly Budget")
-	// view.OnScreenResize(func(ev clui.Event) {
-	// 	view.SetSize(ev.Width, ev.Height)
-	// 	view.ResizeChildren()
-	// })
 
 	viewWidth, _ := view.Size()
 
@@ -63,6 +69,7 @@ func RenderMonthlyBudgetReport() {
 	createFramedProgressBar(right, 2980, 2980, "Actual Income", "$2979.45")
 
 	createTable(right, "Income Breakdown")
+	return nil
 }
 
 func createFramedProgressBar(parent *clui.Frame, value int, maxValue int, title string, valueLabel string) {

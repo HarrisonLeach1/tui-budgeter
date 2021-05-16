@@ -1,23 +1,29 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"os"
+
+	"github.com/HarrisonLeach1/xero-tui/internal/api/auth"
 	"github.com/HarrisonLeach1/xero-tui/internal/ui"
 	"github.com/VladimirMarkelov/clui"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	// // loads values from .env into the system
-	// if err := godotenv.Load(); err != nil {
-	// 	log.Print("No .env file found")
-	// }
+	// loads values from .env into the system
+	if err := godotenv.Load(); err != nil {
+		log.Print("No .env file found")
+	}
 
-	// clientId, exists := os.LookupEnv("XERO_CLIENT_ID")
-	// if !exists {
-	// 	fmt.Println("XERO_CLIENT_ID environment variable is not present")
-	// 	return
-	// }
+	clientId, exists := os.LookupEnv("XERO_CLIENT_ID")
+	if !exists {
+		fmt.Println("XERO_CLIENT_ID environment variable is not present")
+		return
+	}
 
-	// auth.AuthorizeUser(clientId, "http://localhost:5003")
+	auth.AuthorizeUser(clientId, "http://localhost:5003")
 
 	mainLoop()
 }

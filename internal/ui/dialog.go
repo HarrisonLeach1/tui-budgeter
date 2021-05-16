@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/VladimirMarkelov/clui"
@@ -15,12 +16,34 @@ func SelectReportPeriod() {
 	selDlg.OnClose(func() {
 		switch selDlg.Result() {
 		case clui.DialogButton1:
-			RenderMonthlyBudgetReport()
+			idx := selDlg.Value()
+			selected := periods[idx]
+			RenderBudgetReport(getStartAndEndDates(selected))
 		}
 		// ask the composer to repaint all windows
 		clui.PutEvent(clui.Event{Type: clui.EventRedraw})
 	})
 }
+
+// Given a selected month period e.g. "2021-05"
+// Generates the start and end dates e.g. "2021-05-01" and "2021-05-31"
+func getStartAndEndDates(selected string) (string, string) {
+	month := selected[len(selected)-2:]
+	year := selected[0:4]
+	y, err := strconv.Atoi(year)
+	if err != nil {
+		panic("Could not parse selected year value")
+	}
+	m, err := strconv.Atoi(month)
+	if err != nil {
+		panic("Could not parse selected month value")
+	}
+	fromDate := time.Date(y, time.Month(m), 1, 0, 0, 0, 0, time.Local)
+	toDate := fromDate.AddDate(0, 1, 0).Add(time.Nanosecond * -1)
+	return fromDate.Format("2006-01-02"), toDate.Format("2006-01-02")
+
+}
+
 func generatePeriods() []string {
 
 	var periods []string
@@ -47,7 +70,11 @@ func generatePeriods() []string {
 
 		for j := startMonth; j <= endMonth; j = getNextMonth(j) {
 			month := j + 1
-			periods = append([]string{fmt.Sprintf("%s %d", time.Month(month), i)}, periods...)
+			monthStr := strconv.Itoa(month)
+			if month < 10 {
+				monthStr = "0" + monthStr
+			}
+			periods = append([]string{fmt.Sprintf("%d-%s", i, monthStr)}, periods...)
 		}
 	}
 	return periods

@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func GetProfitAndLossStatement() (string, error) {
+func GetProfitAndLossStatement(fromDate string, toDate string) (models.Report, error) {
 	viper.SetConfigFile("config.yaml")
 	viper.AddConfigPath("./") // optionally look for config in the working directory
 
@@ -26,10 +26,9 @@ func GetProfitAndLossStatement() (string, error) {
 	accessToken := viper.GetString("accesstoken")
 	tenantId := viper.GetString("tenantId")
 
-	url := "https://api.xero.com/api.xro/2.0/Reports/ProfitAndLoss"
+	url := fmt.Sprintf("https://api.xero.com/api.xro/2.0/Reports/ProfitAndLoss?fromDate=%s&toDate=%s", fromDate, toDate)
 
 	// create the request and execute it
-	fmt.Println("tenant Id: " + tenantId)
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 	req.Header.Add("Accept", "application/json")
@@ -38,18 +37,18 @@ func GetProfitAndLossStatement() (string, error) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Printf("HTTP error: %s", err)
-		return "", err
+		return models.Report{}, err
 	}
 
 	if res.StatusCode == 401 {
 		body, _ := ioutil.ReadAll(res.Body)
 
 		fmt.Printf("err header: %s \n body: %s", res.Header, body)
-		return "", fmt.Errorf("err header: %s \n body: %s", res.Header, body)
+		return models.Report{}, fmt.Errorf("err header: %s \n body: %s", res.Header, body)
 	}
 
 	if res.StatusCode != 200 {
-		return "", fmt.Errorf("Error calling API: %s", res.Status)
+		return models.Report{}, fmt.Errorf("Error calling API: %s", res.Status)
 	}
 
 	// process the response
@@ -64,9 +63,8 @@ func GetProfitAndLossStatement() (string, error) {
 		fmt.Println()
 
 		fmt.Printf("auth: JSON error: %s", err)
-		return "", err
+		return models.Report{}, err
 	}
-	fmt.Printf("%+v\n", responseData)
 
-	return "", nil
+	return responseData.Reports[0], nil
 }
