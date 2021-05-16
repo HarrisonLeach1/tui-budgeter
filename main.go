@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/HarrisonLeach1/xero-tui/internal/ui"
+	"github.com/HarrisonLeach1/tui-budgeter/internal/ui"
 	"github.com/VladimirMarkelov/clui"
 )
 

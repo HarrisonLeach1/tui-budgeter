@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/HarrisonLeach1/xero-tui/internal/api/models"
+	"github.com/HarrisonLeach1/tui-budgeter/internal/api/models"
 	"github.com/spf13/viper"
 )
 

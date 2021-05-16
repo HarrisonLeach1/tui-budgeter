@@ -1,4 +1,4 @@
-module github.com/HarrisonLeach1/xero-tui
+module github.com/HarrisonLeach1/tui-budgeter
 
 go 1.16
 

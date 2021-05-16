@@ -1,12 +1,16 @@
 package ui
 
 import (
+	"fmt"
+	"io/ioutil"
+	"strings"
+
 	"github.com/VladimirMarkelov/clui"
 	"github.com/nsf/termbox-go"
 )
 
 func RenderHomePage() {
-	view := clui.AddWindow(0, 0, 50, 50, "Home Page")
+	view := clui.AddWindow(0, 0, 60, 60, "Home Page")
 	// view.OnScreenResize(func(ev clui.Event) {
 	// 	view.SetSize(ev.Width, ev.Height)
 	// 	view.ResizeChildren()
@@ -15,14 +19,35 @@ func RenderHomePage() {
 
 	viewWidth, _ := view.Size()
 
-	banner := clui.CreateFrame(view, viewWidth*2, 40, clui.BorderThin, clui.AutoSize)
-	banner.SetPack(clui.Vertical)
-	banner.SetGaps(clui.KeepValue, 1)
-	banner.SetPaddings(1, 1)
+	bannerFrame := clui.CreateFrame(view, viewWidth*2, 10, clui.BorderThin, clui.AutoSize)
+	bannerFrame.SetPack(clui.Vertical)
+	bannerFrame.SetGaps(clui.KeepValue, 1)
+	bannerFrame.SetPaddings(1, 1)
 
-	text := []string{"Welcome to the budgeting tool!", " ", "This tool uses the Xero API. For instructions on how to get it up and running view the setup guide."}
-	desc := clui.CreateTextView(banner, clui.AutoSize, clui.AutoSize, clui.AutoSize)
-	desc.AddText(text)
+	bt := []string{`     __        _       __              __           __           `,
+		`    / /___  __(_)     / /_  __  ______/ /___ ____  / /____  _____`,
+		`   / __/ / / / /_____/ __ \/ / / / __  / __ \/ _ \/ __/ _ \/ ___/`,
+		`  / /_/ /_/ / /_____/ /_/ / /_/ / /_/ / /_/ /  __/ /_/  __/ /    `,
+		`  \__/\__,_/_/     /_.___/\__,_/\__,_/\__, /\___/\__/\___/_/     `,
+		`                                     /____/							`}
+
+	banner := clui.CreateTextView(bannerFrame, clui.AutoSize, 10, clui.AutoSize)
+	banner.AddText(bt)
+	banner.SetBackColor(clui.ColorBlack)
+	banner.SetTextColor(clui.ColorCyanBold)
+	banner.SetGaps(clui.KeepValue, 1)
+	banner.SetAlign(clui.AlignCenter)
+
+	descFrame := clui.CreateFrame(view, viewWidth*2, 40, clui.BorderThin, clui.AutoSize)
+	descFrame.SetPack(clui.Vertical)
+	descFrame.SetGaps(clui.KeepValue, 1)
+	descFrame.SetPaddings(1, 1)
+	descFrame.SetTitle("Welcome to xui-budgeter!")
+
+	ar := readFileIntoStringArray("./README.md")
+
+	desc := clui.CreateTextView(descFrame, clui.AutoSize, 40, clui.AutoSize)
+	desc.AddText(ar)
 	desc.SetBackColor(clui.ColorBlack)
 	desc.SetActiveBackColor(clui.ColorBlack)
 	desc.SetActive(false)
@@ -31,12 +56,12 @@ func RenderHomePage() {
 	desc.SetWordWrap(true)
 	desc.SetAlign(clui.AlignCenter)
 	desc.SetGaps(clui.KeepValue, 1)
-	desc.SetClipped(true)
 
 	menuFrame := clui.CreateFrame(view, viewWidth*2, 10, clui.BorderThin, clui.AutoSize)
 	menuFrame.SetPack(clui.Vertical)
 	menuFrame.SetGaps(clui.KeepValue, 1)
 	menuFrame.SetPaddings(1, 1)
+	menuFrame.SetTitle("Menu")
 
 	menu := clui.CreateListBox(menuFrame, clui.AutoSize, clui.AutoSize, clui.AutoSize)
 	menu.AddItem("View Monthly Budgets")
@@ -51,11 +76,34 @@ func RenderHomePage() {
 			if menu.SelectedItem() == 0 {
 				SelectReportPeriod()
 			} else if menu.SelectedItem() == 1 {
-				// Render help page
+				RenderSetupPage()
 			}
 			return true
 		}
 		return false
 	})
 
+}
+
+func readFileIntoStringArray(file string) []string {
+
+	b, err := ioutil.ReadFile(file)
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	str := string(b)
+	ar := strings.Split(str, "\n")
+	length := len(ar) * 2
+	out := make([]string, length)
+
+	for i := 0; i < len(out); i++ {
+		if i%2 == 0 {
+			out[i] = ar[i/2]
+		} else {
+
+			out[i] = " "
+		}
+	}
+	return append([]string{" "}, out...)
 }

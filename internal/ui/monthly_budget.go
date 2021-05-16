@@ -2,10 +2,11 @@ package ui
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 
-	"github.com/HarrisonLeach1/xero-tui/internal/api"
-	"github.com/HarrisonLeach1/xero-tui/internal/api/models"
+	"github.com/HarrisonLeach1/tui-budgeter/internal/api"
+	"github.com/HarrisonLeach1/tui-budgeter/internal/api/models"
 	"github.com/VladimirMarkelov/clui"
 )
 
@@ -46,8 +47,17 @@ func RenderBudgetReport(fromDate string, toDate string) error {
 	summary.SetGaps(clui.KeepValue, 1)
 	summary.SetPaddings(1, 1)
 
+	openingBalance, err := strconv.ParseFloat(bankReport.Rows[1].Rows[0].Cells[1].Value, 64)
+	if err != nil {
+		panic("what")
+	}
+	closingBalance, err := strconv.ParseFloat(bankReport.Rows[1].Rows[0].Cells[4].Value, 64)
+	if err != nil {
+		panic("the")
+	}
+
 	summaryList := clui.CreateListBox(summary, 10, 10, clui.AutoSize)
-	summaryList.AddItem("Increase in savings: %142")
+	summaryList.AddItem(fmt.Sprintf("Increase in savings: %%%.2f", ((closingBalance-openingBalance)/openingBalance)*100))
 	summaryList.AddItem(fmt.Sprintf("Planned Savings: $%.2f", budgetedIncome-budgetedExpenses))
 	summaryList.AddItem(fmt.Sprintf("Actual Savings: $%.2f", actualIncome-actualExpenses))
 	summaryList.SetTextColor(clui.ColorWhite)
@@ -55,8 +65,9 @@ func RenderBudgetReport(fromDate string, toDate string) error {
 	summaryList.SetBackColor(clui.ColorBlack)
 	summaryList.SetActiveBackColor(clui.ColorBlack)
 
-	createFramedProgressBar(left, 1415, 2980, "Planned Expenses", fmt.Sprintf("$%.2f", budgetedExpenses))
-	createFramedProgressBar(left, 2980, 2980, "Actual Expenses", fmt.Sprintf("$%.2f", actualExpenses))
+	maxExp := math.Max(budgetedExpenses, actualExpenses)
+	createFramedProgressBar(left, int(budgetedExpenses), int(maxExp), "Planned Expenses", fmt.Sprintf("$%.2f", budgetedExpenses))
+	createFramedProgressBar(left, int(actualExpenses), int(maxExp), "Actual Expenses", fmt.Sprintf("$%.2f", actualExpenses))
 
 	createTable(left, "Expenses Breakdown", pnlReport, budgetReport, "Less Operating Expenses")
 
@@ -65,16 +76,17 @@ func RenderBudgetReport(fromDate string, toDate string) error {
 	right.SetGaps(clui.KeepValue, 1)
 	right.SetPaddings(1, 1)
 
-	createBalanceChart(right, bankReport)
+	createBalanceChart(right, openingBalance, closingBalance)
 
-	createFramedProgressBar(right, 1415, 2980, "Planned Income", fmt.Sprintf("$%.2f", budgetedIncome))
-	createFramedProgressBar(right, 2980, 2980, "Actual Income", fmt.Sprintf("$%.2f", actualIncome))
+	maxInc := math.Max(budgetedIncome, actualIncome)
+	createFramedProgressBar(right, int(budgetedIncome), int(maxInc), "Planned Income", fmt.Sprintf("$%.2f", budgetedIncome))
+	createFramedProgressBar(right, int(actualIncome), int(maxInc), "Actual Income", fmt.Sprintf("$%.2f", actualIncome))
 
 	createTable(right, "Income Breakdown", pnlReport, budgetReport, "Income")
 	return nil
 }
 
-func createBalanceChart(parent *clui.Frame, bankReport models.Report) {
+func createBalanceChart(parent *clui.Frame, openingBalance float64, closingBalance float64) {
 
 	barChartFrame := clui.CreateFrame(parent, 10, 10, clui.BorderThin, clui.AutoSize)
 	barChartFrame.SetPack(clui.Vertical)
@@ -87,15 +99,6 @@ func createBalanceChart(parent *clui.Frame, bankReport models.Report) {
 	barChart.SetValueWidth(10)
 	barChart.SetMinBarWidth(20)
 	barChart.SetBarGap(5)
-
-	openingBalance, err := strconv.ParseFloat(bankReport.Rows[1].Rows[0].Cells[1].Value, 64)
-	if err != nil {
-		panic("what")
-	}
-	closingBalance, err := strconv.ParseFloat(bankReport.Rows[1].Rows[0].Cells[4].Value, 64)
-	if err != nil {
-		panic("the")
-	}
 
 	data := []clui.BarData{
 		{Value: openingBalance, Title: "Opening Balance", Fg: clui.ColorBlue},
@@ -115,7 +118,11 @@ func createFramedProgressBar(parent *clui.Frame, value int, maxValue int, title 
 	bar := clui.CreateProgressBar(barFrame, 1, 1, clui.AutoSize)
 	bar.SetLimits(0, maxValue)
 	bar.SetTitle(valueLabel)
+	bar.SetTitleColor(clui.ColorBlack)
 	bar.SetValue(value)
+	bar.SetBackColor(clui.ColorWhite)
+	bar.SetActiveBackColor(clui.ColorCyan)
+	bar.SetTextColor(clui.ColorBlack)
 }
 
 func createTable(parent *clui.Frame, title string, pnlReport models.Report, budgetReport models.Report, sectionTitle string) {

@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/HarrisonLeach1/xero-tui/internal/api/models"
+	"github.com/HarrisonLeach1/tui-budgeter/internal/api/models"
 	cv "github.com/nirasan/go-oauth-pkce-code-verifier"
 	"github.com/skratchdot/open-golang/open"
 	"github.com/spf13/viper"
