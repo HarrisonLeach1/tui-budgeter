@@ -11,22 +11,16 @@ import (
 )
 
 func GetProfitAndLossStatement(fromDate string, toDate string) (models.Report, error) {
-	viper.SetConfigFile("config.yaml")
-	viper.AddConfigPath("./") // optionally look for config in the working directory
+	return fetchReport("ProfitAndLoss", fromDate, toDate)
+}
+func GetBankSummary(fromDate string, toDate string) (models.Report, error) {
+	return fetchReport("BankSummary", fromDate, toDate)
+}
 
-	if err := viper.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// Config file not found; ignore error if desired
-			panic("config.yaml file not found")
-		} else {
-			// Config file was found but another error was produced
-			panic("error reading config.yaml")
-		}
-	}
-	accessToken := viper.GetString("accesstoken")
-	tenantId := viper.GetString("tenantId")
+func fetchReport(reportType string, fromDate string, toDate string) (models.Report, error) {
+	accessToken, tenantId := getHeaders()
 
-	url := fmt.Sprintf("https://api.xero.com/api.xro/2.0/Reports/ProfitAndLoss?fromDate=%s&toDate=%s", fromDate, toDate)
+	url := fmt.Sprintf("https://api.xero.com/api.xro/2.0/Reports/%s?fromDate=%s&toDate=%s", reportType, fromDate, toDate)
 
 	// create the request and execute it
 	req, _ := http.NewRequest("GET", url, nil)
@@ -67,4 +61,24 @@ func GetProfitAndLossStatement(fromDate string, toDate string) (models.Report, e
 	}
 
 	return responseData.Reports[0], nil
+
+}
+
+func getHeaders() (string, string) {
+	viper.SetConfigFile("config.yaml")
+	viper.AddConfigPath("./") // optionally look for config in the working directory
+
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// Config file not found; ignore error if desired
+			panic("config.yaml file not found")
+		} else {
+			// Config file was found but another error was produced
+			panic("error reading config.yaml")
+		}
+	}
+	accessToken := viper.GetString("accesstoken")
+	tenantId := viper.GetString("tenantId")
+
+	return accessToken, tenantId
 }

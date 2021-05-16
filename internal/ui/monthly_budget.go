@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/HarrisonLeach1/xero-tui/internal/api"
+	"github.com/HarrisonLeach1/xero-tui/internal/api/models"
 	"github.com/VladimirMarkelov/clui"
 )
 
@@ -9,7 +10,7 @@ import (
 //
 // Params fromDate and toDate should be in the format "yyyy-mm-dd" e.g. "2021-05-31"
 func RenderBudgetReport(fromDate string, toDate string) error {
-	report, err := api.GetProfitAndLossStatement(fromDate, toDate)
+	pnlReport, err := api.GetProfitAndLossStatement(fromDate, toDate)
 	if err != nil {
 		return err
 	}
@@ -104,4 +105,13 @@ func createTable(parent *clui.Frame, title string) {
 	}
 
 	table.SetColumns(cols)
+}
+
+func findReportSection(report models.Report, title string) models.ReportRow {
+	for _, row := range report.Rows {
+		if row.Title == title {
+			return row
+		}
+	}
+	return models.ReportRow{}
 }
