@@ -1,13 +1,15 @@
 package ui
 
 import (
+	"embed"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	"github.com/VladimirMarkelov/clui"
 	"github.com/nsf/termbox-go"
 )
+
+var FS embed.FS
 
 func RenderHomePage() {
 	view := clui.AddWindow(0, 0, 60, 60, "Home Page")
@@ -44,7 +46,7 @@ func RenderHomePage() {
 	descFrame.SetPaddings(1, 1)
 	descFrame.SetTitle("Welcome to xui-budgeter!")
 
-	ar := readFileIntoStringArray("./README.md")
+	ar := readFileIntoStringArray("README.md")
 
 	desc := clui.CreateTextView(descFrame, clui.AutoSize, 40, clui.AutoSize)
 	desc.AddText(ar)
@@ -85,9 +87,9 @@ func RenderHomePage() {
 
 }
 
-func readFileIntoStringArray(file string) []string {
+func readFileIntoStringArray(filePath string) []string {
 
-	b, err := ioutil.ReadFile(file)
+	b, err := FS.ReadFile(filePath)
 	if err != nil {
 		fmt.Print(err)
 	}

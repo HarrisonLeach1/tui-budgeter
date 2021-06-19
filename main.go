@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"log"
 	"os"
@@ -11,11 +12,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
+//go:embed README.md docs/setup.md
+var fs embed.FS
+
 func main() {
 	// loads values from .env into the system
 	if err := godotenv.Load(); err != nil {
 		log.Print("No .env file found")
 	}
+	// provide access to markdown files
+	ui.FS = fs
 
 	clientId, exists := os.LookupEnv("XERO_CLIENT_ID")
 	if !exists {

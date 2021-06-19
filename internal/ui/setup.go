@@ -13,7 +13,7 @@ func RenderSetupPage() {
 	textFrame.SetGaps(clui.KeepValue, 1)
 	textFrame.SetPaddings(1, 1)
 
-	ar := readFileIntoStringArray("./docs/setup.md")
+	ar := readFileIntoStringArray("docs/setup.md")
 
 	text := clui.CreateTextView(textFrame, clui.AutoSize, 60, clui.AutoSize)
 	text.AddText(ar)
